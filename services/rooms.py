@@ -1,23 +1,15 @@
 # ============================================================
-# ROOMS SERVICE MODULE
+# ROOMS SERVICE MODULE (FIXED VERSION)
 # ============================================================
 #
 # PURPOSE:
-# This module handles all operations related to:
-# - Rooms
+# Handles retrieval and display of room data from MySQL.
 #
-# DATABASE USED:
-# MySQL (relational database)
+# DATABASE TABLE:
+# - room  (NOT rooms)
 #
 # ARCHITECTURE ROLE:
-# This file belongs to the SERVICE LAYER.
-# It is responsible for retrieving and processing data
-# from the database, not for user interaction or routing.
-#
-# RESPONSIBILITIES:
-# - Execute SQL queries on rooms table
-# - Fetch room data
-# - Display formatted results to the user
+# Service Layer (between main.py and database)
 # ============================================================
 
 
@@ -30,52 +22,55 @@ from mysql_connection import connection
 # ============================================================
 #
 # PURPOSE:
-# Retrieves and displays all room records from the database.
+# Fetches all room records and displays them in a readable format.
 #
-# DATABASE OPERATION:
-# Executes a simple SELECT query on the rooms table.
-#
+# IMPORTANT:
+# Uses table name "room" (singular) based on schema.
 # ============================================================
 
 def view_rooms():
 
-    # Create a connection to the MySQL database
-    # This uses the shared connection function from mysql_connection.py
+    # --------------------------------------------------------
+    # Step 1: Connect to database
+    # --------------------------------------------------------
     conn = connection()
 
-    # Create a cursor object to execute SQL queries
+    if conn is None:
+        print("Database connection failed. Cannot retrieve rooms.")
+        return
+
     cursor = conn.cursor()
 
-    # ========================================================
-    # SQL QUERY EXPLANATION
-    # ========================================================
-    # This query retrieves all columns (*) from the rooms table.
-    # It assumes the table contains information such as:
-    # - room id
-    # - room name or number
-    # - capacity
-    # - location (if applicable)
-    # ========================================================
+    try:
+        # ----------------------------------------------------
+        # Step 2: SQL QUERY
+        # ----------------------------------------------------
+        # IMPORTANT: table is "room", NOT "rooms"
+        # ----------------------------------------------------
+        query = "SELECT roomID, roomName, capacity FROM room"
 
-    query = "SELECT * FROM rooms"
+        cursor.execute(query)
+        results = cursor.fetchall()
 
-    # Execute the SQL query
-    cursor.execute(query)
+        # ----------------------------------------------------
+        # Step 3: Display output
+        # ----------------------------------------------------
+        print("\n====================")
+        print("       ROOMS        ")
+        print("====================")
 
-    # Fetch all rows returned by the database
-    results = cursor.fetchall()
+        for row in results:
+            print("Room ID   :", row[0])
+            print("Room Name :", row[1])
+            print("Capacity  :", row[2])
+            print("--------------------")
 
-    # Print header for clarity in console output
-    print("\n====================")
-    print("      ROOMS         ")
-    print("====================")
+    except Exception as err:
+        print("Error retrieving rooms:", err)
 
-    # Loop through each room record
-    for row in results:
-
-        # Each row represents a room record from the database
-        # The structure depends on your table schema
-        print("Room Record:", row)
-
-    # Close database connection to release resources
-    conn.close()
+    finally:
+        # ----------------------------------------------------
+        # Step 4: Close connection safely
+        # ----------------------------------------------------
+        cursor.close()
+        conn.close()

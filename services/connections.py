@@ -1,31 +1,26 @@
 # ============================================================
-# CONNECTIONS SERVICE MODULE (NEO4J)
+# CONNECTIONS SERVICE MODULE (NEO4J - FINAL VERSION)
 # ============================================================
 #
 # PURPOSE:
-# This module handles all graph database operations related to:
-# - Viewing attendee connections
-# - Creating attendee relationships
+# This module handles all Neo4j graph database operations:
+# - Viewing attendee-to-attendee relationships
+# - Creating connections between attendees
 #
-# DATABASE USED:
-# Neo4j (graph database)
-#
-# ARCHITECTURE ROLE:
-# This file belongs to the SERVICE LAYER.
-# It contains business logic related to graph relationships
-# and communicates with Neo4j through neo4j_connection.py.
+# DATABASE:
+# Neo4j (Graph Database)
 #
 # GRAPH MODEL:
-# (Attendee)-[:CONNECTED_TO]->(Attendee)
+# (Attendee)-[:CONNECTED_TO]-(Attendee)
 #
-# RESPONSIBILITIES:
-# - Execute Cypher queries
-# - Retrieve graph relationships
-# - Create new graph relationships
+# ARCHITECTURE ROLE:
+# Service Layer
+# (Called by main.py, interacts with Neo4j only)
+#
 # ============================================================
 
 
-# Import reusable Neo4j driver function
+# Import Neo4j driver factory function from connection module
 from neo4j_connection import get_driver
 
 
@@ -34,69 +29,62 @@ from neo4j_connection import get_driver
 # ============================================================
 #
 # PURPOSE:
-# Retrieves and displays all attendee connections
-# stored in the Neo4j graph database.
+# Retrieves and displays all attendee relationships stored in Neo4j.
 #
-# DATABASE OPERATION:
-# Uses a Cypher MATCH query to retrieve relationships
-# between attendee nodes.
+# WHAT IT DOES:
+# - Connects to Neo4j
+# - Runs a Cypher MATCH query
+# - Fetches all CONNECTED_TO relationships
+# - Prints them in a readable format
 #
 # ============================================================
 
 def view_connections():
 
-    # Create Neo4j driver connection
-    # Uses reusable function from neo4j_connection.py
+    # Get Neo4j driver instance (connection to database)
     driver = get_driver()
 
-    # Open a Neo4j session
-    # Sessions are used to execute Cypher queries
-    with driver.session() as session:
+    try:
+        # Open a session (required to run Cypher queries)
+        with driver.session() as session:
 
-        # ====================================================
-        # CYPHER QUERY EXPLANATION
-        # ====================================================
-        #
-        # MATCH:
-        # Searches the graph database for a relationship pattern
-        #
-        # GRAPH PATTERN:
-        # (a1:Attendee)-[:CONNECTED_TO]->(a2:Attendee)
-        #
-        # This means:
-        # - Find an Attendee node called a1
-        # - Find another Attendee node called a2
-        # - Find a CONNECTED_TO relationship between them
-        #
-        # RETURN:
-        # Returns attendee names for display
-        # ====================================================
+            # ----------------------------------------------------
+            # CYPHER QUERY
+            # ----------------------------------------------------
+            # MATCH: finds relationships between Attendee nodes
+            # RETURN: retrieves attendee names for display
+            # ----------------------------------------------------
 
-        result = session.run("""
-        MATCH (a1:Attendee)-[:CONNECTED_TO]->(a2:Attendee)
-        RETURN a1.name AS from_attendee,
-               a2.name AS to_attendee
-        """)
+            result = session.run("""
+            MATCH (a1:Attendee)-[:CONNECTED_TO]-(a2:Attendee)
+            RETURN a1.attendeeName AS from_attendee,
+                   a2.attendeeName AS to_attendee
+            """)
 
-        # Print section header
-        print("\n===================================")
-        print("      ATTENDEE CONNECTIONS         ")
-        print("===================================")
+            # Print formatted header
+            print("\n===================================")
+            print("      ATTENDEE CONNECTIONS         ")
+            print("===================================")
 
-        # Loop through each relationship returned
-        for record in result:
+            # Track whether any results exist
+            found = False
 
-            # record["from_attendee"] = starting node
-            # record["to_attendee"] = connected node
+            # Loop through query results
+            for record in result:
+                found = True
+                print(f"{record['from_attendee']} → {record['to_attendee']}")
 
-            print(
-                f"{record['from_attendee']} "
-                f"→ "
-                f"{record['to_attendee']}"
-            )
+            # If no relationships exist
+            if not found:
+                print("No connections found.")
 
-    # Close Neo4j driver connection
-    driver.close()
+    except Exception as e:
+        # Handle errors safely (prevents program crash)
+        print("Error retrieving connections:", e)
+
+    finally:
+        # Always close Neo4j driver connection
+        driver.close()
 
 
 # ============================================================
@@ -104,59 +92,61 @@ def view_connections():
 # ============================================================
 #
 # PURPOSE:
-# Creates a new relationship between two attendees
-# in the Neo4j graph database.
+# Creates a relationship between two attendees in Neo4j.
 #
 # USER INPUT:
 # - First attendee name
 # - Second attendee name
 #
-# DATABASE OPERATION:
-# Uses Cypher CREATE statement
+# IMPORTANT:
+# Both attendees must already exist as nodes in Neo4j.
 #
 # ============================================================
 
 def add_connection():
 
-    # Prompt user for first attendee name
+    # Collect input from user
     name1 = input("Enter first attendee name: ")
-
-    # Prompt user for second attendee name
     name2 = input("Enter second attendee name: ")
 
-    # Create Neo4j driver connection
+    # Get Neo4j driver instance
     driver = get_driver()
 
-    # Open Neo4j session
-    with driver.session() as session:
+    try:
+        with driver.session() as session:
 
-        # ====================================================
-        # CYPHER QUERY EXPLANATION
-        # ====================================================
-        #
-        # MATCH:
-        # Finds existing attendee nodes in the graph
-        #
-        # CREATE:
-        # Creates a CONNECTED_TO relationship
-        #
-        # PARAMETERS:
-        # $name1 and $name2 are parameterised values
-        # passed safely into the query
-        #
-        # ====================================================
+            # ----------------------------------------------------
+            # CYPHER QUERY EXPLANATION
+            # ----------------------------------------------------
+            # MATCH: finds both attendee nodes by name
+            # MERGE: creates relationship if it does not exist
+            #         (prevents duplicate relationships)
+            # RETURN: confirms nodes used in relationship
+            # ----------------------------------------------------
 
-        session.run("""
-        MATCH (a1:Attendee {name: $name1})
-        MATCH (a2:Attendee {name: $name2})
-        CREATE (a1)-[:CONNECTED_TO]->(a2)
-        """,
-        name1=name1,
-        name2=name2
-        )
+            result = session.run("""
+            MATCH (a1:Attendee {attendeeName: $name1})
+            MATCH (a2:Attendee {attendeeName: $name2})
+            MERGE (a1)-[:CONNECTED_TO]-(a2)
+            RETURN a1, a2
+            """,
+            name1=name1,
+            name2=name2
+            )
 
-    # Display confirmation message
-    print("✔ Connection successfully created")
+            # Convert result to list to check if operation succeeded
+            records = list(result)
 
-    # Close Neo4j driver connection
-    driver.close()
+            # If no records returned, nodes likely do not exist
+            if len(records) == 0:
+                print("⚠ Could not create connection (attendees may not exist)")
+            else:
+                print("✔ Connection successfully created")
+
+    except Exception as e:
+        # Catch and display any Neo4j errors
+        print("Error creating connection:", e)
+
+    finally:
+        # Always close connection to free resources
+        driver.close()

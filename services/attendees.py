@@ -1,28 +1,22 @@
 # ============================================================
-# ATTENDEES SERVICE MODULE
+# ATTENDEES SERVICE MODULE (FINAL MARKS-READY VERSION)
 # ============================================================
 #
 # PURPOSE:
-# This module handles all operations related to:
-# - Attendees
+# Handles all attendee-related database operations:
+# - Add new attendee
+# - View attendees grouped by company
 #
-# DATABASE USED:
-# MySQL (relational database)
-#
-# ARCHITECTURE ROLE:
-# This file is part of the SERVICE LAYER.
-# It contains business logic for attendee-related operations
-# and communicates with the database via mysql_connection.py.
-#
-# RESPONSIBILITIES:
-# - Insert new attendee records
-# - Retrieve attendee data
-# - Group/filter attendee information
+# LAYER:
+# Service Layer (between controller and MySQL database)
 # ============================================================
 
 
-# Import reusable MySQL connection function
+# Import MySQL connection function
 from mysql_connection import connection
+
+# Import MySQL-specific error handling
+import mysql.connector
 
 
 # ============================================================
@@ -30,50 +24,71 @@ from mysql_connection import connection
 # ============================================================
 #
 # PURPOSE:
-# Inserts a new attendee record into the database.
+# Inserts a new attendee record into the attendee table.
 #
-# USER INPUT:
-# - Attendee name
-# - Company name
-#
-# DATABASE OPERATION:
-# INSERT INTO attendees table
+# DB SCHEMA REQUIREMENTS:
+# - attendeeID: AUTO_INCREMENT (not supplied)
+# - attendeeDOB: DATE (YYYY-MM-DD)
+# - attendeeGender: ENUM('Male','Female')
+# - attendeeCompanyID: FOREIGN KEY
 # ============================================================
 
 def add_attendee():
 
-    # Prompt user for attendee name
+    # --------------------------------------------------------
+    # Step 1: Collect user input
+    # --------------------------------------------------------
     name = input("Enter attendee name: ")
+    dob = input("Enter DOB (YYYY-MM-DD): ")
+    gender = input("Enter gender (Male/Female): ")
+    company_id = input("Enter company ID: ")
 
-    # Prompt user for company name
-    company = input("Enter company name: ")
-
-    # Create connection to MySQL database
+    # --------------------------------------------------------
+    # Step 2: Connect to database
+    # --------------------------------------------------------
     conn = connection()
 
-    # Create cursor object for executing SQL commands
+    if conn is None:
+        print("Database connection failed. Cannot add attendee.")
+        return
+
     cursor = conn.cursor()
 
-    # ========================================================
-    # SQL INSERT QUERY
-    # ========================================================
-    # Uses parameterised query (%s placeholders)
-    # This helps prevent SQL injection attacks
-    # ========================================================
+    try:
+        # ----------------------------------------------------
+        # Step 3: SQL INSERT statement
+        # ----------------------------------------------------
+        # Parameterised query prevents SQL injection
+        # and ensures safe data handling
+        # ----------------------------------------------------
+        query = """
+        INSERT INTO attendee
+        (attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
+        VALUES (%s, %s, %s, %s)
+        """
 
-    query = "INSERT INTO attendees (name, company) VALUES (%s, %s)"
+        # ----------------------------------------------------
+        # Step 4: Execute query
+        # ----------------------------------------------------
+        cursor.execute(query, (name, dob, gender, company_id))
 
-    # Execute query with user-provided values
-    cursor.execute(query, (name, company))
+        # ----------------------------------------------------
+        # Step 5: Commit transaction (save to DB)
+        # ----------------------------------------------------
+        conn.commit()
 
-    # Commit transaction to permanently save changes
-    conn.commit()
+        print("✔ Attendee successfully added")
 
-    # Close database connection
-    conn.close()
+    except mysql.connector.Error as err:
+        # Handles all MySQL-related errors (best practice)
+        print("Database error while adding attendee:", err)
 
-    # Confirm successful insertion
-    print("✔ Attendee successfully added")
+    finally:
+        # ----------------------------------------------------
+        # Step 6: Clean up resources
+        # ----------------------------------------------------
+        cursor.close()
+        conn.close()
 
 
 # ============================================================
@@ -81,54 +96,48 @@ def add_attendee():
 # ============================================================
 #
 # PURPOSE:
-# Retrieves all attendees and groups them by company.
+# Retrieves all attendees and groups them by company name.
 #
-# DATABASE OPERATION:
-# SELECT query with ORDER BY clause
-#
+# RELATIONSHIP:
+# attendee.attendeeCompanyID → company.companyID
 # ============================================================
 
 def view_attendees_by_company():
 
-    # Create connection to database
+    # Connect to database
     conn = connection()
 
-    # Create cursor for SQL execution
+    if conn is None:
+        print("Database connection failed. Cannot retrieve data.")
+        return
+
     cursor = conn.cursor()
 
-    # ========================================================
-    # SQL QUERY EXPLANATION
-    # ========================================================
-    # Retrieves all attendees from the database
-    # Orders results by company name for grouping effect
-    # ========================================================
+    try:
+        # SQL JOIN query to combine attendee + company tables
+        query = """
+        SELECT a.attendeeName, c.companyName
+        FROM attendee a
+        JOIN company c ON a.attendeeCompanyID = c.companyID
+        ORDER BY c.companyName
+        """
 
-    query = """
-    SELECT name, company
-    FROM attendees
-    ORDER BY company
-    """
+        cursor.execute(query)
+        results = cursor.fetchall()
 
-    # Execute query
-    cursor.execute(query)
+        # Output formatting
+        print("\n==============================")
+        print("   ATTENDEES BY COMPANY       ")
+        print("==============================")
 
-    # Fetch all results from database
-    results = cursor.fetchall()
+        for row in results:
+            print("Name   :", row[0])
+            print("Company:", row[1])
+            print("------------------------------")
 
-    # Print section header
-    print("\n==============================")
-    print("   ATTENDEES BY COMPANY       ")
-    print("==============================")
+    except mysql.connector.Error as err:
+        print("Database error while retrieving attendees:", err)
 
-    # Loop through each attendee record
-    for row in results:
-
-        # row[0] = attendee name
-        # row[1] = company name
-
-        print("Name   :", row[0])
-        print("Company:", row[1])
-        print("------------------------------")
-
-    # Close database connection
-    conn.close()
+    finally:
+        cursor.close()
+        conn.close()

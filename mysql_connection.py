@@ -1,84 +1,121 @@
-# Import the mysql connector library
-# This library allows Python to communicate with MySQL
+# ============================================================
+# MYSQL CONNECTION MODULE
+# ============================================================
+#
+# PURPOSE:
+# This module is responsible ONLY for creating a connection
+# between Python and the MySQL database.
+#
+# It is part of the INFRASTRUCTURE / DATA ACCESS LAYER.
+#
+# It is reused by all service-layer modules such as:
+#   - attendees.py
+#   - speakers.py
+#   - rooms.py
+#   - connections.py
+#
+# BENEFITS:
+# - Centralised connection logic (no duplication)
+# - Easier debugging and maintenance
+# - Cleaner architecture separation
+# ============================================================
+
+
+# Import MySQL connector library
+# This allows Python to communicate with MySQL
 import mysql.connector
 
 
+# ============================================================
+# FUNCTION: connection()
+# ============================================================
+#
+# PURPOSE:
+# Establishes and returns a live connection to the MySQL database.
+#
+# RETURN VALUE:
+# - MySQL connection object if successful
+# - None if connection fails
+#
+# USED BY:
+# - All service-layer modules (CRUD operations)
+#
+# ============================================================
+
 def connection():
-    connection_details= 'connection string placeholder'
+
+    try:
+        # --------------------------------------------------------
+        # CREATE DATABASE CONNECTION
+        # --------------------------------------------------------
+        # These credentials define how Python connects to MySQL:
+        #
+        # host     → where MySQL is running (localhost = your machine)
+        # user     → MySQL username (root in this case)
+        # password → MySQL password (must match Docker/MySQL setup)
+        # database → schema name we want to use (appdbproj)
+        # --------------------------------------------------------
+
+        conn = mysql.connector.connect(
+            host='localhost',
+            user='root',
+            password='password',   # IMPORTANT: update if your password differs
+            database='appdbproj'
+        )
+
+        # --------------------------------------------------------
+        # VERIFY CONNECTION STATUS
+        # --------------------------------------------------------
+        # is_connected() ensures the connection is valid
+        # before returning it to the calling module
+        # --------------------------------------------------------
+
+        if conn.is_connected():
+
+            # Confirmation message for debugging / CLI feedback
+            print("Successful connection to MySQL database")
+
+            # Return active connection to service layer
+            return conn
+
+        else:
+            # If connection object is created but not active
+            print("Connection failed")
+            return None
+
+    except mysql.connector.Error as err:
+
+        # --------------------------------------------------------
+        # ERROR HANDLING (MYSQL-SPECIFIC ERRORS)
+        # --------------------------------------------------------
+        # Catches issues such as:
+        # - wrong password
+        # - database does not exist
+        # - MySQL server not running
+        # - Docker container not accessible
+        # --------------------------------------------------------
+
+        print("Database connection error:", err)
+
+        return None
 
 
-
-# Creates and returns a MySQL database connection object.
-# This function is called by service modules whenever they need to interact with the database.
-
-# Create a connection to the MySQL database
-# Replace the values below with your own MySQL details
-    connection_details = mysql.connector.connect(host= 'localhost', user='root', password='password', database='appdbproj')
-
-    # Check if the connection was successful
-    if connection_details.is_connected:
-
-        print("Successful connection to MySQL database")
-
-        return connection_details
-
-    else:
-        print("Connection Failed")
-
-#  # ============================================================
-# PYTHON ENTRY POINT CHECK
+# ============================================================
+# TESTING BLOCK (OPTIONAL DEVELOPMENT CHECK)
 # ============================================================
 #
-# Every Python file has a built-in variable called __name__
+# This runs ONLY when executing this file directly:
 #
-# Python uses this variable to determine HOW the file is being used:
+#   python mysql_connection.py
 #
-# ------------------------------------------------------------
-# CASE 1: File is run directly
-# Example:
-#     python mysql_connection.py
+# It will NOT run when imported into other modules.
 #
-# In this case Python sets:
-#     __name__ = "__main__"
-#
-# Meaning:
-#     "This file is the main program being executed"
-#
-# ------------------------------------------------------------
-# CASE 2: File is imported into another file
-# Example:
-#     from mysql_connection import connection
-#
-# In this case Python sets:
-#     __name__ = "mysql_connection"
-#
-# Meaning:
-#     "This file is being used as a module (toolbox), not run directly"
-#
+# PURPOSE:
+# - Quick sanity check that DB connection works
+# - Useful during setup/debugging
 # ============================================================
 
-
-
-
-    # This block ONLY runs if this file is executed directly
-    # (NOT when it is imported into another file)
-
-    # We call the connection() function here to TEST it.
-    # This is useful for debugging and verifying that:
-    # - MySQL connection works
-    # - credentials are correct
-    # - database is reachable
-
-  
 if __name__ == "__main__":
 
+    # Attempt connection test
     connection()
-
-        
-    
-    
-
-
-
-
-

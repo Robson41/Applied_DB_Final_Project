@@ -1,80 +1,153 @@
 # ============================================================
-# NEO4J CONNECTION MODULE
+# IMPORT SECTION
 # ============================================================
 #
-# PURPOSE:
-# This module creates and returns a reusable Neo4j driver.
+# "import" in Python is used to bring in external libraries.
+# Here we import GraphDatabase from the neo4j driver package.
 #
-# DATABASE USED:
-# Neo4j Graph Database
-#
-# DESIGN PRINCIPLES:
-# - Separation of concerns
-# - Reusable database connection
-# - Centralised configuration
-#
-# WHY THIS IS IMPORTANT:
-# Service modules can reuse this connection function
-# without duplicating connection logic.
+# This gives us access to:
+# - Database connections
+# - Sessions
+# - Cypher query execution
 # ============================================================
 
-
-# Import GraphDatabase class from neo4j package
 from neo4j import GraphDatabase
 
 
 # ============================================================
-# FUNCTION: get_driver
+# FUNCTION: get_driver()
 # ============================================================
 #
-# PURPOSE:
-# Creates and returns a Neo4j driver object.
+# A function is defined using the "def" keyword.
+# Syntax:
+#   def function_name(parameters):
 #
-# This driver is reused by service modules whenever
-# Neo4j access is required.
-#
+# This function has NO parameters because all config is hardcoded.
 # ============================================================
 
 def get_driver():
 
-    # Create Neo4j driver connection
+    # ========================================================
+    # GraphDatabase.driver()
+    # ========================================================
+    #
+    # This is a CLASS METHOD (factory method).
+    # It creates a DRIVER object which is the main entry point
+    # for connecting to Neo4j.
+    #
+    # Syntax breakdown:
+    #
+    #   driver = ClassName.method(arguments)
+    #
+    # ========================================================
+
     driver = GraphDatabase.driver(
 
-        # Bolt protocol connection string
+        # ----------------------------------------------------
+        # CONNECTION STRING (URI)
+        # ----------------------------------------------------
+        # "bolt://" is the protocol used by Neo4j
+        # localhost = running on your own machine
+        # 7687 = default Neo4j Bolt port
+        # ----------------------------------------------------
+
         "bolt://localhost:7687",
 
-        # Authentication credentials
+        # ----------------------------------------------------
+        # AUTHENTICATION TUPLE
+        # ----------------------------------------------------
+        # This is a Python tuple:
+        #
+        # ("username", "password")
+        #
+        # Neo4j uses this to verify access rights
+        # ----------------------------------------------------
+
         auth=("neo4j", "password")
     )
 
-    # Return reusable driver object
+    # ========================================================
+    # return keyword
+    # ========================================================
+    #
+    # "return" sends the driver object back to whoever
+    # called this function.
+    #
+    # Without return, the driver would be lost after function ends
+    # ========================================================
+
     return driver
 
 
 # ============================================================
-# OPTIONAL TEST BLOCK
+# TEST BLOCK (IMPORTANT PYTHON CONCEPT)
 # ============================================================
 #
-# This block only runs if this file is executed directly.
-# It does NOT run when imported into service modules.
+# Python sets a special variable called:
 #
+#   __name__
+#
+# If this file is RUN directly:
+#   __name__ == "__main__"
+#
+# If this file is IMPORTED:
+#   __name__ == "neo4j_connection"
+#
+# This allows safe testing without affecting imports.
 # ============================================================
 
 if __name__ == "__main__":
 
-    # Create Neo4j driver
+    # --------------------------------------------------------
+    # Create driver using our function
+    # --------------------------------------------------------
     driver = get_driver()
 
-    # Open Neo4j session
+    # --------------------------------------------------------
+    # "with" statement (context manager)
+    # --------------------------------------------------------
+    #
+    # This automatically closes the session when done
+    # even if errors happen.
+    #
+    # Syntax:
+    #   with object as variable:
+    #       do something
+    # --------------------------------------------------------
+
     with driver.session() as session:
 
-        # Execute simple test query
+        # ----------------------------------------------------
+        # session.run()
+        # ----------------------------------------------------
+        #
+        # Executes a Cypher query on the database.
+        #
+        # Cypher is Neo4j's query language (like SQL for graphs)
+        #
+        # Here we return a simple string to test connection
+        # ----------------------------------------------------
+
         result = session.run(
             "RETURN 'Neo4j is working' AS msg"
         )
 
-        # Print query result
+        # ----------------------------------------------------
+        # result.single()
+        # ----------------------------------------------------
+        #
+        # Extracts a single row from the result set
+        # because we only returned one value
+        # ----------------------------------------------------
+
         print(result.single()["msg"])
 
-    # Close driver connection
+    # --------------------------------------------------------
+    # driver.close()
+    # --------------------------------------------------------
+    #
+    # Frees resources and closes connection properly
+    # VERY IMPORTANT in real applications
+    # --------------------------------------------------------
+
     driver.close()

@@ -1,94 +1,97 @@
 # ============================================================
-# SPEAKERS SERVICE MODULE
+# SPEAKERS SERVICE MODULE (FIXED VERSION)
 # ============================================================
 #
 # PURPOSE:
-# This module handles all operations related to:
-# - Speakers
-# - Sessions
+# This module handles retrieval of speaker and session data
+# from the MySQL database.
 #
-# DATABASE USED:
-# MySQL (relational database)
+# DATABASE DESIGN NOTE:
+# There is NO separate "speakers" table in this system.
+# Instead, speaker information is stored directly in the
+# "session" table under the column:
+#   - speakerName
 #
 # ARCHITECTURE ROLE:
-# This is part of the SERVICE LAYER.
-# It sits between main.py (controller) and the database layer.
+# This file is part of the SERVICE LAYER.
+# It sits between:
+#   main.py (controller)
+#   and MySQL database (data layer)
 #
-# RESPONSIBILITY:
+# RESPONSIBILITIES:
 # - Execute SQL queries
-# - Process database results
-# - Return/display formatted output
+# - Retrieve session data
+# - Format and display results
+# - Close database connection safely
 # ============================================================
 
 
-# Import reusable database connection function
-
+# Import reusable MySQL connection function
 from mysql_connection import connection
+
 
 # ============================================================
 # FUNCTION: view_speakers_sessions
 # ============================================================
 #
 # PURPOSE:
-# Retrieves and displays all speakers and their associated sessions.
+# Retrieves all sessions and their associated speaker names
+# from the database and displays them in a formatted output.
 #
-# DATABASE OPERATION:
-# Uses a SQL JOIN between:
-# - speakers table
-# - sessions table
+# DATABASE TABLE USED:
+# - session
 #
-# RELATIONSHIP:
-# speakers.id = sessions.speaker_id
+# COLUMNS USED:
+# - speakerName
+# - sessionTitle
+# - sessionDate
 #
 # ============================================================
 
 def view_speakers_sessions():
-    # Create a connection to the MySQL database
-    # This uses the reusable function from mysql_connection.py
+
+    # --------------------------------------------------------
+    # Step 1: Establish database connection
+    # --------------------------------------------------------
     conn = connection()
 
-    # Create a cursor object
-    # The cursor is used to execute SQL queries
-
+    # Create cursor object to execute SQL queries
     cursor = conn.cursor()
-       # ========================================================
-    # SQL QUERY EXPLANATION
-    # ========================================================
-    # We are joining two tables:
-    #
-    # speakers:
-    #   - contains speaker information (name, id)
-    #
-    # sessions:
-    #   - contains session details (title, time, speaker_id)
-    #
-    # JOIN condition ensures we match each session
-    # with its correct speaker.
-    # ========================================================
+
+    # --------------------------------------------------------
+    # Step 2: Define SQL query
+    # --------------------------------------------------------
+    # We query the session table directly because speaker
+    # information is stored in the same table.
+    # --------------------------------------------------------
     query = """
-    SELECT speakers.name, sessions.title, sessions.time
-    FROM speakers
-    JOIN sessions ON speakers.id = sessions.speaker_id
+    SELECT speakerName, sessionTitle, sessionDate
+    FROM session
     """
 
-    # Execute the SQL query on the database
+    # --------------------------------------------------------
+    # Step 3: Execute query
+    # --------------------------------------------------------
     cursor.execute(query)
 
     # Fetch all rows returned by the query
     results = cursor.fetchall()
 
-    # Fetch all rows returned by the query
+    # --------------------------------------------------------
+    # Step 4: Display results in CLI format
+    # --------------------------------------------------------
     print('============================================')
     print('Speakers & Session Data')
     print('============================================')
 
-    # Loop through each record returned from database
+    # Loop through each record and print formatted output
     for row in results:
         print("Speaker Name :", row[0])
         print("Session Title:", row[1])
-        print("Session Time :", row[2])
+        print("Session Date :", row[2])
         print("------------------------------")
-    
-    conn.close()
 
-    
+    # --------------------------------------------------------
+    # Step 5: Close database connection
+    # --------------------------------------------------------
+    conn.close()
